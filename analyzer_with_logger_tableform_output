@@ -1,0 +1,82 @@
+import logging
+from scapy.all import sniff, ARP, IP, Raw
+from tabulate import tabulate
+
+# Configure logging
+logging.basicConfig(
+    filename="arp_requests.log",
+    filemode="a",  # Append to the log file
+    format="%(message)s",  # Simple format for table-like entries
+    level=logging.INFO
+)
+
+# List to store ARP packet details
+arp_entries = []
+
+# Add headers to the log file (if not already present)
+with open("arp_requests.log", "a") as log_file:
+    log_file.write(f"{'Source MAC':<20}{'Source IP':<15}{'Destination MAC':<20}{'Destination IP':<15}\n")
+    log_file.write("-" * 70 + "\n")
+
+
+def packet_callback(packet):
+    try:
+        # Check for ARP layer
+        if packet.haslayer(ARP):
+            arp_layer = packet[ARP]
+            
+            # Format log entry as a table row
+            log_message = f"{arp_layer.hwsrc:<20}{arp_layer.psrc:<15}{arp_layer.hwdst:<20}{arp_layer.pdst:<15}"
+            
+            # Log the ARP request to the file
+            logging.info(log_message)
+            
+            # Add ARP details to the list for console table
+            arp_entries.append([arp_layer.hwsrc, arp_layer.psrc, arp_layer.hwdst, arp_layer.pdst])
+            
+            # Print the ARP packet information in tabular format
+            print("\nCurrent ARP Entries (Console):")
+            print(tabulate(arp_entries, headers=["Source MAC", "Source IP", "Destination MAC", "Destination IP"], tablefmt="grid"))
+            print("-" * 50)
+
+        # Check for IP layer (optional; for completeness)
+        elif packet.haslayer(IP):
+            ip_layer = packet[IP]
+            protocol = ip_layer.proto
+            
+            # Display packet information
+            print(f"Packet: {packet.summary()}")
+            print(f"Source IP: {ip_layer.src}")
+            print(f"Destination IP: {ip_layer.dst}")
+            print(f"Protocol: {protocol}")
+            
+            # If there's a payload, show it
+            if packet.haslayer(Raw):
+                raw_layer = packet[Raw]
+                print(f"Payload: {raw_layer.load}")
+
+            print("-" * 50)
+
+    except Exception as e:
+        logging.error(f"Error processing packet: {e}")
+        print(f"Error processing packet: {e}")
+
+
+def main():
+    # Set the interface to capture packets from (change as needed)
+    interface = "Wi-Fi"  # Change to your network interface
+    print(f"Capturing packets on interface: {interface}")
+    
+    try:
+        # Start packet capture
+        sniff(iface=interface, prn=packet_callback, store=0)
+    except KeyboardInterrupt:
+        # Handle exit and display collected ARP requests
+        print("\nCapture stopped. Displaying final ARP requests...\n")
+        if arp_entries:
+            print(tabulate(arp_entries, headers=["Source MAC", "Source IP", "Destination MAC", "Destination IP"], tablefmt="grid"))
+        else:
+            print("No ARP requests captured.")
+
+if __name__ == "__main__":
+    main()
