@@ -1,7 +1,7 @@
 import subprocess
 import time
 
-# Predefined trusted MAC addresses for critical devices
+# Predefined trusted MAC addresses for critical and trusted devices
 trusted_devices = {
     "192.168.22.102 ": "10:68:38:b1:84:81 ",  # Router's IP and MAC
     "192.168.22.85": "08:00:27:9d:4f:3a"  # Second machine's IP and MAC
